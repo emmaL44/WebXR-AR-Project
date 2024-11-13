@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My WebXR AR Experience</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #enter-ar { position: absolute; top: 20px; left: 20px; z-index: 1; }
+    </style>
+</head>
+<body>
+    <button id="enter-ar">Enter AR</button>
+    <script>
+        // Basic Three.js setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.xr.enabled = true; // Enable WebXR
+        document.body.appendChild(renderer.domElement);
+
+        // Add light to the scene
+        const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+        light.position.set(0.5, 1, 0.25);
+        scene.add(light);
+
+        // Load 3D model
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+            'Assets/veneer_chairwhite.glb', // Path to your model
+            function (gltf) {
+                const model = gltf.scene;
+                model.position.set(0, 0, -1); // Position the model in front of the user
+                scene.add(model);
+            },
+            undefined,
+            function (error) {
+                console.error('An error occurred while loading the model:', error);
+            }
+        );
+
+        // Enter AR Session
+        document.getElementById('enter-ar').addEventListener('click', async () => {
+            if (navigator.xr) {
+                try {
+                    const session = await navigator.xr.requestSession('immersive-ar', {
+                        requiredFeatures: ['hit-test']
+                    });
+                    renderer.xr.setSession(session);
+                    animate();
+                } catch (error) {
+                    console.error("AR session failed: ", error);
+                }
+            } else {
+                alert("WebXR not supported in this browser.");
+            }
+        });
+
+        function animate() {
+            renderer.setAnimationLoop(() => {
+                renderer.render(scene, camera);
+            });
+        }
+    </script>
+</body>
+</html>
