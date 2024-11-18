@@ -57,6 +57,13 @@ async function activateXR() {
   const viewerSpace = await session.requestReferenceSpace("viewer");
   const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
+  let reticle;
+  loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
+    reticle = gltf.scene;
+    reticle.visible = false; // Hide initially
+    scene.add(reticle);
+  });
+
   let placedObject = null; // To track the placed object
 
   const onXRFrame = (time, frame) => {
@@ -75,20 +82,30 @@ async function activateXR() {
       camera.updateMatrixWorld(true);
 
       const hitTestResults = frame.getHitTestResults(hitTestSource);
-      if (hitTestResults.length > 0 && !placedObject && chair) {
+      if (hitTestResults.length > 0) {
         const hitPose = hitTestResults[0].getPose(referenceSpace);
 
-        // Place the object at the hit-test position
-        chair.position.set(
+        // Position the reticle at the hit-test location
+        reticle.visible = true;
+        reticle.position.set(
           hitPose.transform.position.x,
           hitPose.transform.position.y,
           hitPose.transform.position.z
         );
-        chair.rotation.set(0, 0, 0); // Reset rotation
-        chair.scale.set(1, 1, 1); // Reset scale
+        reticle.updateMatrixWorld(true);
 
-        scene.add(chair);
-        placedObject = chair; // Mark as placed
+        // Place the chair at the reticle position when the user selects the reticle (e.g., tapping on the screen)
+        session.addEventListener("select", () => {
+          if (!placedObject && chair) {
+            chair.position.copy(reticle.position); // Place at reticle position
+            chair.rotation.set(0, 0, 0); // Reset rotation if needed
+            chair.scale.set(1, 1, 1); // Set default scale
+            scene.add(chair);
+            placedObject = chair; // Mark the object as placed
+          }
+        });
+      } else {
+        reticle.visible = false; // Hide the reticle if no hit-test result
       }
 
       renderer.render(scene, camera);
