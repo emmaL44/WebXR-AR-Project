@@ -2,8 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <title>Interactive AR</title>
 
   <!-- three.js -->
@@ -112,8 +111,10 @@ async function activateXR() {
   // Enable interaction with the object
   function enableObjectInteraction(object) {
     let isDragging = false;
+    let isScaling = false;
     let initialTouches = [];
     let initialScale = object.scale.clone();
+    let initialRotation = object.rotation.clone();
 
     canvas.addEventListener("touchstart", (event) => {
       if (event.touches.length === 1) {
@@ -121,8 +122,10 @@ async function activateXR() {
         initialTouches = [event.touches[0]];
       } else if (event.touches.length === 2) {
         isDragging = false;
+        isScaling = true;
         initialTouches = [...event.touches];
         initialScale = object.scale.clone();
+        initialRotation = object.rotation.clone();
       }
     });
 
@@ -130,12 +133,12 @@ async function activateXR() {
       if (isDragging && event.touches.length === 1) {
         // Dragging (move object)
         const touch = event.touches[0];
-        const deltaX = (touch.clientX - initialTouches[0].clientX) * 0.001;
-        const deltaY = (touch.clientY - initialTouches[0].clientY) * 0.001;
+        const deltaX = (touch.clientX - initialTouches[0].clientX) * 0.01;
+        const deltaY = (touch.clientY - initialTouches[0].clientY) * 0.01;
         object.position.x += deltaX;
         object.position.y -= deltaY;
         initialTouches = [touch];
-      } else if (event.touches.length === 2) {
+      } else if (isScaling && event.touches.length === 2) {
         // Pinch gesture (scale object)
         const currentDistance = getDistance(event.touches[0], event.touches[1]);
         const initialDistance = getDistance(initialTouches[0], initialTouches[1]);
@@ -153,13 +156,13 @@ async function activateXR() {
           event.touches[0],
           event.touches[1]
         );
-        object.rotation.y += deltaAngle * 0.01; // Adjust rotation speed
-        initialTouches = [...event.touches];
+        object.rotation.y = initialRotation.y + deltaAngle * 0.01; // Adjust rotation speed
       }
     });
 
     canvas.addEventListener("touchend", () => {
       isDragging = false;
+      isScaling = false;
       initialTouches = [];
     });
 
