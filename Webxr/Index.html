@@ -26,29 +26,19 @@ async function activateXR() {
     context: gl
   });
   renderer.autoClear = false;
-  renderer.shadowMap.enabled = true; // Enable shadow maps
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
 
   const camera = new THREE.PerspectiveCamera();
   camera.matrixAutoUpdate = false;
 
   const scene = new THREE.Scene();
 
-  // Add lighting
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-  directionalLight.position.set(0, 10, 0); // Light placed above
-  directionalLight.castShadow = true; // Enable shadows from this light
+  // Adjusted lighting from above
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  directionalLight.position.set(0, 5, 0).normalize(); // Light from above (y=5)
   scene.add(directionalLight);
 
-  // Add ambient light to soften shadows
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Soft ambient light
   scene.add(ambientLight);
-
-  // Adjust shadow properties for the directional light
-  directionalLight.shadow.mapSize.width = 2048;  // High resolution shadows
-  directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.shadow.camera.near = 0.5;  // Near clipping plane
-  directionalLight.shadow.camera.far = 50;  // Far clipping plane
 
   const loader = new THREE.GLTFLoader();
 
@@ -56,8 +46,6 @@ async function activateXR() {
   let chair;
   loader.load("model/chair/cups/2Oak Chair.gltf", function (gltf) {
     chair = gltf.scene;
-    chair.castShadow = true; // Enable shadow casting for the chair
-    chair.receiveShadow = true; // Enable the chair to receive shadows
   });
 
   const session = await navigator.xr.requestSession("immersive-ar", { requiredFeatures: ["hit-test"] });
