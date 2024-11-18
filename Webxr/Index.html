@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <title>AR Interaction</title>
+  <title>Interactive AR</title>
 
   <!-- three.js -->
   <script src="https://unpkg.com/three@0.126.0/build/three.js"></script>
@@ -65,42 +65,14 @@ async function activateXR() {
   const viewerSpace = await session.requestReferenceSpace("viewer");
   const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
-  // AR UI Buttons
-  const createButton = (text, callback, position) => {
-    const button = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.2, 0.1),
-      new THREE.MeshBasicMaterial({ color: 0x007bff, side: THREE.DoubleSide })
-    );
-    const label = new THREE.Mesh(
-      new THREE.TextGeometry(text, { size: 0.02, height: 0.005 }),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
-    );
-
-    button.position.copy(position);
-    label.position.copy(position).add(new THREE.Vector3(0, 0.06, 0));
-
-    button.callback = callback;
-    scene.add(button);
-    scene.add(label);
-
-    return button;
-  };
-
-  const buttons = [];
-  const buttonOffset = new THREE.Vector3(0.3, 0.2, -0.6);
-
-  // Create buttons dynamically
-  buttons.push(createButton("Move +X", () => moveObject("x", 0.1), buttonOffset));
-  buttons.push(createButton("Rotate Y", () => rotateObject("y", 0.1), buttonOffset.add(new THREE.Vector3(0, -0.2, 0))));
-  buttons.push(createButton("Scale Up", () => scaleObject(1.1), buttonOffset.add(new THREE.Vector3(0, -0.4, 0))));
-
-  // Hide reticle and show buttons
+  // Handle object placement
   const onSelect = () => {
     if (reticle.visible && chair && !placedObject) {
       placedObject = chair.clone();
       placedObject.position.copy(reticle.position);
       scene.add(placedObject);
-      reticle.visible = false; // Hide reticle
+      reticle.visible = false; // Hide reticle after placement
+      enableObjectInteraction(placedObject);
     }
   };
 
@@ -137,24 +109,72 @@ async function activateXR() {
 
   session.requestAnimationFrame(onXRFrame);
 
-  // Transform object functions
-  const moveObject = (axis, value) => {
-    if (placedObject) {
-      placedObject.position[axis] += value;
-    }
-  };
+  // Enable interaction with the object
+  function enableObjectInteraction(object) {
+    let isDragging = false;
+    let initialTouches = [];
+    let initialScale = object.scale.clone();
 
-  const rotateObject = (axis, value) => {
-    if (placedObject) {
-      placedObject.rotation[axis] += value;
-    }
-  };
+    canvas.addEventListener("touchstart", (event) => {
+      if (event.touches.length === 1) {
+        isDragging = true;
+        initialTouches = [event.touches[0]];
+      } else if (event.touches.length === 2) {
+        isDragging = false;
+        initialTouches = [...event.touches];
+        initialScale = object.scale.clone();
+      }
+    });
 
-  const scaleObject = (factor) => {
-    if (placedObject) {
-      placedObject.scale.multiplyScalar(factor);
+    canvas.addEventListener("touchmove", (event) => {
+      if (isDragging && event.touches.length === 1) {
+        // Dragging (move object)
+        const touch = event.touches[0];
+        const deltaX = (touch.clientX - initialTouches[0].clientX) * 0.001;
+        const deltaY = (touch.clientY - initialTouches[0].clientY) * 0.001;
+        object.position.x += deltaX;
+        object.position.y -= deltaY;
+        initialTouches = [touch];
+      } else if (event.touches.length === 2) {
+        // Pinch gesture (scale object)
+        const currentDistance = getDistance(event.touches[0], event.touches[1]);
+        const initialDistance = getDistance(initialTouches[0], initialTouches[1]);
+        const scaleFactor = currentDistance / initialDistance;
+        object.scale.set(
+          initialScale.x * scaleFactor,
+          initialScale.y * scaleFactor,
+          initialScale.z * scaleFactor
+        );
+
+        // Rotate with two fingers
+        const deltaAngle = getAngleDifference(
+          initialTouches[0],
+          initialTouches[1],
+          event.touches[0],
+          event.touches[1]
+        );
+        object.rotation.y += deltaAngle * 0.01; // Adjust rotation speed
+        initialTouches = [...event.touches];
+      }
+    });
+
+    canvas.addEventListener("touchend", () => {
+      isDragging = false;
+      initialTouches = [];
+    });
+
+    function getDistance(touch1, touch2) {
+      const dx = touch2.clientX - touch1.clientX;
+      const dy = touch2.clientY - touch1.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
     }
-  };
+
+    function getAngleDifference(touch1a, touch1b, touch2a, touch2b) {
+      const angle1 = Math.atan2(touch1b.clientY - touch1a.clientY, touch1b.clientX - touch1a.clientX);
+      const angle2 = Math.atan2(touch2b.clientY - touch2a.clientY, touch2b.clientX - touch2a.clientX);
+      return angle2 - angle1;
+    }
+  }
 }
 </script>
 </body>
