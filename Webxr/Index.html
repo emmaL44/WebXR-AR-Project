@@ -4,16 +4,28 @@
   <meta charset="UTF-8">
   <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <title>Hello WebXR!</title>
+  <title>AR Interaction</title>
 
   <!-- three.js -->
   <script src="https://unpkg.com/three@0.126.0/build/three.js"></script>
   <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://unpkg.com/three@0.126.0/examples/js/controls/TransformControls.js"></script>
 </head>
 <body>
 
 <button onclick="activateXR()">Start WebXR</button>
+<div id="controls" style="display: none; margin-top: 10px;">
+  <button onclick="moveObject('x', 0.1)">Move +X</button>
+  <button onclick="moveObject('x', -0.1)">Move -X</button>
+  <button onclick="moveObject('y', 0.1)">Move +Y</button>
+  <button onclick="moveObject('y', -0.1)">Move -Y</button>
+  <button onclick="moveObject('z', 0.1)">Move +Z</button>
+  <button onclick="moveObject('z', -0.1)">Move -Z</button>
+  <button onclick="rotateObject('y', 0.1)">Rotate +Y</button>
+  <button onclick="rotateObject('y', -0.1)">Rotate -Y</button>
+  <button onclick="scaleObject(1.1)">Scale Up</button>
+  <button onclick="scaleObject(0.9)">Scale Down</button>
+</div>
+
 <script>
 async function activateXR() {
   const canvas = document.createElement("canvas");
@@ -33,18 +45,25 @@ async function activateXR() {
 
   const scene = new THREE.Scene();
 
-  // Add lighting
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  // Improved lighting
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0); // Increased intensity
   directionalLight.position.set(1, 2, 1).normalize();
   scene.add(directionalLight);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Added brighter ambient light
   scene.add(ambientLight);
 
   const loader = new THREE.GLTFLoader();
+  let reticle, chair, placedObject = null;
 
-  // Load the chair model
-  let chair;
+  // Load reticle
+  loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
+    reticle = gltf.scene;
+    reticle.visible = false;
+    scene.add(reticle);
+  });
+
+  // Load chair model
   loader.load("model/chair/cups/2Oak Chair.gltf", function (gltf) {
     chair = gltf.scene;
   });
@@ -58,8 +77,17 @@ async function activateXR() {
   const viewerSpace = await session.requestReferenceSpace("viewer");
   const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
-  let placedObject = null; // To track the placed object
-  let transformControls = null; // Transform controls for interacting with the object
+  // Handle object placement
+  const onSelect = () => {
+    if (reticle.visible && chair && !placedObject) {
+      placedObject = chair.clone();
+      placedObject.position.copy(reticle.position);
+      scene.add(placedObject);
+      document.getElementById("controls").style.display = "block"; // Show controls
+    }
+  };
+
+  session.addEventListener("select", onSelect);
 
   const onXRFrame = (time, frame) => {
     session.requestAnimationFrame(onXRFrame);
@@ -77,42 +105,13 @@ async function activateXR() {
       camera.updateMatrixWorld(true);
 
       const hitTestResults = frame.getHitTestResults(hitTestSource);
-      if (hitTestResults.length > 0 && !placedObject && chair) {
+      if (hitTestResults.length > 0 && reticle) {
         const hitPose = hitTestResults[0].getPose(referenceSpace);
-
-        // Place the object at the hit-test position
-        chair.position.set(
-          hitPose.transform.position.x,
-          hitPose.transform.position.y,
-          hitPose.transform.position.z
-        );
-        chair.rotation.set(0, 0, 0); // Reset rotation
-        chair.scale.set(1, 1, 1); // Reset scale
-
-        scene.add(chair);
-        placedObject = chair; // Mark as placed
-
-        // Add TransformControls for interaction
-        transformControls = new THREE.TransformControls(camera, renderer.domElement);
-        transformControls.attach(placedObject);
-        transformControls.setMode("translate"); // Default mode: move
-        transformControls.addEventListener("change", () => renderer.render(scene, camera));
-        scene.add(transformControls);
-
-        // Keyboard shortcuts for modes
-        window.addEventListener("keydown", (event) => {
-          switch (event.key) {
-            case "t": // Translate (move)
-              transformControls.setMode("translate");
-              break;
-            case "r": // Rotate
-              transformControls.setMode("rotate");
-              break;
-            case "s": // Scale
-              transformControls.setMode("scale");
-              break;
-          }
-        });
+        reticle.visible = true;
+        reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
+        reticle.updateMatrixWorld(true);
+      } else if (reticle) {
+        reticle.visible = false;
       }
 
       renderer.render(scene, camera);
@@ -120,6 +119,25 @@ async function activateXR() {
   };
 
   session.requestAnimationFrame(onXRFrame);
+
+  // Transform object functions
+  window.moveObject = (axis, value) => {
+    if (placedObject) {
+      placedObject.position[axis] += value;
+    }
+  };
+
+  window.rotateObject = (axis, value) => {
+    if (placedObject) {
+      placedObject.rotation[axis] += value;
+    }
+  };
+
+  window.scaleObject = (factor) => {
+    if (placedObject) {
+      placedObject.scale.multiplyScalar(factor);
+    }
+  };
 }
 </script>
 </body>
