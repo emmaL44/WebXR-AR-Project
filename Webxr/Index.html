@@ -13,18 +13,6 @@
 <body>
 
 <button onclick="activateXR()">Start WebXR</button>
-<div id="controls" style="display: none; margin-top: 10px;">
-  <button onclick="moveObject('x', 0.1)">Move +X</button>
-  <button onclick="moveObject('x', -0.1)">Move -X</button>
-  <button onclick="moveObject('y', 0.1)">Move +Y</button>
-  <button onclick="moveObject('y', -0.1)">Move -Y</button>
-  <button onclick="moveObject('z', 0.1)">Move +Z</button>
-  <button onclick="moveObject('z', -0.1)">Move -Z</button>
-  <button onclick="rotateObject('y', 0.1)">Rotate +Y</button>
-  <button onclick="rotateObject('y', -0.1)">Rotate -Y</button>
-  <button onclick="scaleObject(1.1)">Scale Up</button>
-  <button onclick="scaleObject(0.9)">Scale Down</button>
-</div>
 
 <script>
 async function activateXR() {
@@ -46,11 +34,11 @@ async function activateXR() {
   const scene = new THREE.Scene();
 
   // Improved lighting
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0); // Increased intensity
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
   directionalLight.position.set(1, 2, 1).normalize();
   scene.add(directionalLight);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Added brighter ambient light
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
   scene.add(ambientLight);
 
   const loader = new THREE.GLTFLoader();
@@ -77,13 +65,42 @@ async function activateXR() {
   const viewerSpace = await session.requestReferenceSpace("viewer");
   const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
-  // Handle object placement
+  // AR UI Buttons
+  const createButton = (text, callback, position) => {
+    const button = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.1),
+      new THREE.MeshBasicMaterial({ color: 0x007bff, side: THREE.DoubleSide })
+    );
+    const label = new THREE.Mesh(
+      new THREE.TextGeometry(text, { size: 0.02, height: 0.005 }),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+
+    button.position.copy(position);
+    label.position.copy(position).add(new THREE.Vector3(0, 0.06, 0));
+
+    button.callback = callback;
+    scene.add(button);
+    scene.add(label);
+
+    return button;
+  };
+
+  const buttons = [];
+  const buttonOffset = new THREE.Vector3(0.3, 0.2, -0.6);
+
+  // Create buttons dynamically
+  buttons.push(createButton("Move +X", () => moveObject("x", 0.1), buttonOffset));
+  buttons.push(createButton("Rotate Y", () => rotateObject("y", 0.1), buttonOffset.add(new THREE.Vector3(0, -0.2, 0))));
+  buttons.push(createButton("Scale Up", () => scaleObject(1.1), buttonOffset.add(new THREE.Vector3(0, -0.4, 0))));
+
+  // Hide reticle and show buttons
   const onSelect = () => {
     if (reticle.visible && chair && !placedObject) {
       placedObject = chair.clone();
       placedObject.position.copy(reticle.position);
       scene.add(placedObject);
-      document.getElementById("controls").style.display = "block"; // Show controls
+      reticle.visible = false; // Hide reticle
     }
   };
 
@@ -121,19 +138,19 @@ async function activateXR() {
   session.requestAnimationFrame(onXRFrame);
 
   // Transform object functions
-  window.moveObject = (axis, value) => {
+  const moveObject = (axis, value) => {
     if (placedObject) {
       placedObject.position[axis] += value;
     }
   };
 
-  window.rotateObject = (axis, value) => {
+  const rotateObject = (axis, value) => {
     if (placedObject) {
       placedObject.rotation[axis] += value;
     }
   };
 
-  window.scaleObject = (factor) => {
+  const scaleObject = (factor) => {
     if (placedObject) {
       placedObject.scale.multiplyScalar(factor);
     }
