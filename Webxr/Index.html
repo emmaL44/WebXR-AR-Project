@@ -9,7 +9,6 @@
   <!-- three.js -->
   <script src="https://unpkg.com/three@0.126.0/build/three.js"></script>
   <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://unpkg.com/three@0.126.0/examples/js/controls/TransformControls.js"></script>
 </head>
 <body>
 
@@ -59,7 +58,6 @@ async function activateXR() {
   const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
   let placedObject = null; // To track the placed object
-  let transformControls = null; // Transform controls for interacting with the object
 
   const onXRFrame = (time, frame) => {
     session.requestAnimationFrame(onXRFrame);
@@ -91,28 +89,6 @@ async function activateXR() {
 
         scene.add(chair);
         placedObject = chair; // Mark as placed
-
-        // Add TransformControls for interaction
-        transformControls = new THREE.TransformControls(camera, renderer.domElement);
-        transformControls.attach(placedObject);
-        transformControls.setMode("translate"); // Default mode: move
-        transformControls.addEventListener("change", () => renderer.render(scene, camera));
-        scene.add(transformControls);
-
-        // Keyboard shortcuts for modes
-        window.addEventListener("keydown", (event) => {
-          switch (event.key) {
-            case "t": // Translate (move)
-              transformControls.setMode("translate");
-              break;
-            case "r": // Rotate
-              transformControls.setMode("rotate");
-              break;
-            case "s": // Scale
-              transformControls.setMode("scale");
-              break;
-          }
-        });
       }
 
       renderer.render(scene, camera);
