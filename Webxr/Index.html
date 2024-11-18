@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive AR</title>
 
   <!-- three.js -->
@@ -32,7 +32,7 @@ async function activateXR() {
 
   const scene = new THREE.Scene();
 
-  // Improved lighting
+  // Lighting
   const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
   directionalLight.position.set(1, 2, 1).normalize();
   scene.add(directionalLight);
@@ -44,14 +44,14 @@ async function activateXR() {
   let reticle, chair, placedObject = null;
 
   // Load reticle
-  loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
+  loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", (gltf) => {
     reticle = gltf.scene;
     reticle.visible = false;
     scene.add(reticle);
   });
 
   // Load chair model
-  loader.load("model/chair/cups/2Oak Chair.gltf", function (gltf) {
+  loader.load("model/chair/cups/2Oak Chair.gltf", (gltf) => {
     chair = gltf.scene;
   });
 
@@ -65,17 +65,17 @@ async function activateXR() {
   const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
   // Handle object placement
-  const onSelect = () => {
+  session.addEventListener("select", () => {
     if (reticle.visible && chair && !placedObject) {
       placedObject = chair.clone();
       placedObject.position.copy(reticle.position);
+      placedObject.scale.set(0.5, 0.5, 0.5); // Adjust default scale
       scene.add(placedObject);
       reticle.visible = false; // Hide reticle after placement
+
       enableObjectInteraction(placedObject);
     }
-  };
-
-  session.addEventListener("select", onSelect);
+  });
 
   const onXRFrame = (time, frame) => {
     session.requestAnimationFrame(onXRFrame);
@@ -110,60 +110,38 @@ async function activateXR() {
 
   // Enable interaction with the object
   function enableObjectInteraction(object) {
-    let isDragging = false;
-    let isScaling = false;
-    let initialTouches = [];
-    let initialScale = object.scale.clone();
-    let initialRotation = object.rotation.clone();
+    let lastTouchPosition = null;
 
     canvas.addEventListener("touchstart", (event) => {
       if (event.touches.length === 1) {
-        isDragging = true;
-        initialTouches = [event.touches[0]];
-      } else if (event.touches.length === 2) {
-        isDragging = false;
-        isScaling = true;
-        initialTouches = [...event.touches];
-        initialScale = object.scale.clone();
-        initialRotation = object.rotation.clone();
+        lastTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
       }
     });
 
     canvas.addEventListener("touchmove", (event) => {
-      if (isDragging && event.touches.length === 1) {
-        // Dragging (move object)
-        const touch = event.touches[0];
-        const deltaX = (touch.clientX - initialTouches[0].clientX) * 0.01;
-        const deltaY = (touch.clientY - initialTouches[0].clientY) * 0.01;
-        object.position.x += deltaX;
-        object.position.y -= deltaY;
-        initialTouches = [touch];
-      } else if (isScaling && event.touches.length === 2) {
-        // Pinch gesture (scale object)
-        const currentDistance = getDistance(event.touches[0], event.touches[1]);
-        const initialDistance = getDistance(initialTouches[0], initialTouches[1]);
-        const scaleFactor = currentDistance / initialDistance;
-        object.scale.set(
-          initialScale.x * scaleFactor,
-          initialScale.y * scaleFactor,
-          initialScale.z * scaleFactor
-        );
+      if (event.touches.length === 1 && lastTouchPosition) {
+        const deltaX = event.touches[0].clientX - lastTouchPosition.x;
+        const deltaY = event.touches[0].clientY - lastTouchPosition.y;
 
-        // Rotate with two fingers
-        const deltaAngle = getAngleDifference(
-          initialTouches[0],
-          initialTouches[1],
-          event.touches[0],
-          event.touches[1]
-        );
-        object.rotation.y = initialRotation.y + deltaAngle * 0.01; // Adjust rotation speed
+        object.position.x += deltaX * 0.01;
+        object.position.y -= deltaY * 0.01;
+
+        lastTouchPosition = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+      } else if (event.touches.length === 2) {
+        const currentDistance = getDistance(event.touches[0], event.touches[1]);
+        const initialDistance = lastTouchPosition ? lastTouchPosition.distance : currentDistance;
+
+        const scale = currentDistance / initialDistance;
+        object.scale.set(scale, scale, scale);
+
+        lastTouchPosition = {
+          distance: currentDistance
+        };
       }
     });
 
     canvas.addEventListener("touchend", () => {
-      isDragging = false;
-      isScaling = false;
-      initialTouches = [];
+      lastTouchPosition = null;
     });
 
     function getDistance(touch1, touch2) {
@@ -171,14 +149,9 @@ async function activateXR() {
       const dy = touch2.clientY - touch1.clientY;
       return Math.sqrt(dx * dx + dy * dy);
     }
-
-    function getAngleDifference(touch1a, touch1b, touch2a, touch2b) {
-      const angle1 = Math.atan2(touch1b.clientY - touch1a.clientY, touch1b.clientX - touch1a.clientX);
-      const angle2 = Math.atan2(touch2b.clientY - touch2a.clientY, touch2b.clientX - touch2a.clientX);
-      return angle2 - angle1;
-    }
   }
 }
 </script>
+
 </body>
 </html>
