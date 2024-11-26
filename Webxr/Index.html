@@ -32,18 +32,13 @@ async function activateXR() {
 
   const scene = new THREE.Scene();
 
-  // Adjusted lighting from above
+  // Lighting
   const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  directionalLight.position.set(0, 5, 0).normalize(); // Light from above (y=5)
+  directionalLight.position.set(0, 5, 0).normalize();
   scene.add(directionalLight);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Soft ambient light
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambientLight);
-
-  // Front light (point light)
-  const frontLight = new THREE.PointLight(0xffffff, 1, 10); // White light, intensity of 1, distance of 10 units
-  frontLight.position.set(0, 1, 2); // Position the light in front of the object
-  scene.add(frontLight);
 
   const loader = new THREE.GLTFLoader();
 
@@ -65,7 +60,7 @@ async function activateXR() {
   let reticle;
   loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
     reticle = gltf.scene;
-    reticle.visible = false; // Hide initially
+    reticle.visible = false;
     scene.add(reticle);
   });
 
@@ -74,7 +69,7 @@ async function activateXR() {
   let touchDown = false, touchX = 0, touchY = 0, deltaX = 0, deltaY = 0;
 
   function rotateObject() {
-    if (placedObject && reticle.visible) {
+    if (placedObject) {
       placedObject.rotation.y += deltaX / 100;
     }
   }
@@ -93,9 +88,8 @@ async function activateXR() {
 
   renderer.domElement.addEventListener('touchmove', function (e) {
     e.preventDefault();
-    if (!touchDown) {
-      return;
-    }
+    if (!touchDown) return;
+
     deltaX = e.touches[0].pageX - touchX;
     deltaY = e.touches[0].pageY - touchY;
     touchX = e.touches[0].pageX;
@@ -135,15 +129,15 @@ async function activateXR() {
         // Place the chair at the reticle position when the user selects the reticle (e.g., tapping on the screen)
         session.addEventListener("select", () => {
           if (!placedObject && chair) {
-            chair.position.copy(reticle.position); // Place at reticle position
-            chair.rotation.set(0, 0, 0); // Reset rotation if needed
-            chair.scale.set(1, 1, 1); // Set default scale
+            chair.position.copy(reticle.position);
+            chair.rotation.set(0, 0, 0);
+            chair.scale.set(1, 1, 1);
             scene.add(chair);
-            placedObject = chair; // Mark the object as placed
+            placedObject = chair;
           }
         });
       } else {
-        reticle.visible = false; // Hide the reticle if no hit-test result
+        reticle.visible = false;
       }
 
       renderer.render(scene, camera);
