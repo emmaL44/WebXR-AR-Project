@@ -71,6 +71,39 @@ async function activateXR() {
 
   let placedObject = null; // To track the placed object
 
+  let touchDown = false, touchX = 0, touchY = 0, deltaX = 0, deltaY = 0;
+
+  function rotateObject() {
+    if (placedObject && reticle.visible) {
+      placedObject.rotation.y += deltaX / 100;
+    }
+  }
+
+  renderer.domElement.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    touchDown = true;
+    touchX = e.touches[0].pageX;
+    touchY = e.touches[0].pageY;
+  }, false);
+
+  renderer.domElement.addEventListener('touchend', function (e) {
+    e.preventDefault();
+    touchDown = false;
+  }, false);
+
+  renderer.domElement.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    if (!touchDown) {
+      return;
+    }
+    deltaX = e.touches[0].pageX - touchX;
+    deltaY = e.touches[0].pageY - touchY;
+    touchX = e.touches[0].pageX;
+    touchY = e.touches[0].pageY;
+
+    rotateObject();
+  }, false);
+
   const onXRFrame = (time, frame) => {
     session.requestAnimationFrame(onXRFrame);
 
