@@ -1,7 +1,19 @@
-model-viewer {
-    display: block;
+/* Ensure the page and body take the full viewport */
+html, body {
+    margin: 0;
+    padding: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain; /* Maintain aspect ratio */
-    background: #f0f0f0; /* Optional: background color */
+    overflow: hidden; /* Prevent scrolling */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f0f0f0; /* Optional: Neutral background */
+}
+
+/* Ensure <model-viewer> element is visible and centered */
+model-viewer {
+    width: 100vw; /* Full width of the viewport */
+    height: 100vh; /* Full height of the viewport */
+    object-fit: contain; /* Maintain aspect ratio of the 3D model */
 }
