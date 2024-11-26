@@ -1,25 +1,118 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <title>Hello WebXR!</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        /* Full-screen layout for the model-viewer */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-  <link rel="stylesheet" href="style.css">
+        /* Centering the model-viewer */
+        model-viewer {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+        }
 
-  <!-- three.js -->
-  <script src="https://unpkg.com/three@0.126.0/build/three.js"></script>
-  <script src="https://unpkg.com/three@0.126.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+        /* Controls panel */
+        .controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Button styles */
+        button {
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        /* Help tooltip styles */
+        .help-tooltip {
+            display: none;
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .help-tooltip.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
 
-  <model-viewer src="model/chair/cups/2Oak Chair.gltf"
-              alt="chair"
-              ar
-              auto-rotate
-              camera-controls>
-  </model-viewer>
+    <model-viewer id="model" src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+                  alt="3D model of astronaut"
+                  ar
+                  auto-rotate
+                  camera-controls>
+    </model-viewer>
+
+    <!-- Control buttons -->
+    <div class="controls">
+        <!-- Screenshot Button -->
+        <button id="screenshotBtn">Take Screenshot</button>
+
+        <!-- Help Button -->
+        <button id="helpBtn">?</button>
+    </div>
+
+    <!-- Help Tooltip -->
+    <div id="helpTooltip" class="help-tooltip">
+        <p>This is a 3D model viewer. Use the controls to rotate, zoom, and explore the model. Press the "Take Screenshot" button to capture an image of the model.</p>
+    </div>
+
+    <script>
+        // Get references to elements
+        const modelViewer = document.getElementById('model');
+        const screenshotBtn = document.getElementById('screenshotBtn');
+        const helpBtn = document.getElementById('helpBtn');
+        const helpTooltip = document.getElementById('helpTooltip');
+
+        // Function to take a screenshot of the model
+        screenshotBtn.addEventListener('click', () => {
+            modelViewer.getScreenshot().then((screenshot) => {
+                // Create a link to download the screenshot
+                const link = document.createElement('a');
+                link.href = screenshot;
+                link.download = 'model-screenshot.png';
+                link.click();
+            });
+        });
+
+        // Toggle help tooltip visibility
+        helpBtn.addEventListener('click', () => {
+            helpTooltip.classList.toggle('active');
+        });
+    </script>
+
 </body>
 </html>
