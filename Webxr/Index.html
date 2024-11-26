@@ -32,13 +32,18 @@ async function activateXR() {
 
   const scene = new THREE.Scene();
 
-  // Lighting
+  // Adjusted lighting from above
   const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  directionalLight.position.set(0, 5, 0).normalize();
+  directionalLight.position.set(0, 5, 0).normalize(); // Light from above (y=5)
   scene.add(directionalLight);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Soft ambient light
   scene.add(ambientLight);
+
+  // Front light (point light)
+  const frontLight = new THREE.PointLight(0xffffff, 1, 10); // White light, intensity of 1, distance of 10 units
+  frontLight.position.set(0, 1, 2); // Position the light in front of the object
+  scene.add(frontLight);
 
   const loader = new THREE.GLTFLoader();
 
@@ -60,43 +65,13 @@ async function activateXR() {
   let reticle;
   loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
     reticle = gltf.scene;
-    reticle.visible = false;
+    reticle.visible = false; // Hide initially
     scene.add(reticle);
   });
 
   let placedObject = null; // To track the placed object
-
-  let touchDown = false, touchX = 0, touchY = 0, deltaX = 0, deltaY = 0;
-
-  function rotateObject() {
-    if (placedObject) {
-      placedObject.rotation.y += deltaX / 100;
-    }
-  }
-
-  renderer.domElement.addEventListener('touchstart', function (e) {
-    e.preventDefault();
-    touchDown = true;
-    touchX = e.touches[0].pageX;
-    touchY = e.touches[0].pageY;
-  }, false);
-
-  renderer.domElement.addEventListener('touchend', function (e) {
-    e.preventDefault();
-    touchDown = false;
-  }, false);
-
-  renderer.domElement.addEventListener('touchmove', function (e) {
-    e.preventDefault();
-    if (!touchDown) return;
-
-    deltaX = e.touches[0].pageX - touchX;
-    deltaY = e.touches[0].pageY - touchY;
-    touchX = e.touches[0].pageX;
-    touchY = e.touches[0].pageY;
-
-    rotateObject();
-  }, false);
+  let isRotating = false;
+  let lastTouchX;
 
   const onXRFrame = (time, frame) => {
     session.requestAnimationFrame(onXRFrame);
@@ -129,20 +104,40 @@ async function activateXR() {
         // Place the chair at the reticle position when the user selects the reticle (e.g., tapping on the screen)
         session.addEventListener("select", () => {
           if (!placedObject && chair) {
-            chair.position.copy(reticle.position);
-            chair.rotation.set(0, 0, 0);
-            chair.scale.set(1, 1, 1);
+            chair.position.copy(reticle.position); // Place at reticle position
+            chair.rotation.set(0, 0, 0); // Reset rotation if needed
+            chair.scale.set(1, 1, 1); // Set default scale
             scene.add(chair);
-            placedObject = chair;
+            placedObject = chair; // Mark the object as placed
           }
         });
       } else {
-        reticle.visible = false;
+        reticle.visible = false; // Hide the reticle if no hit-test result
       }
 
       renderer.render(scene, camera);
     }
   };
+
+  // Handle rotation
+  canvas.addEventListener("touchstart", (e) => {
+    if (placedObject) {
+      isRotating = true;
+      lastTouchX = e.touches[0].clientX;
+    }
+  });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (isRotating && placedObject) {
+      const deltaX = e.touches[0].clientX - lastTouchX;
+      lastTouchX = e.touches[0].clientX;
+      placedObject.rotation.y += deltaX * 0.01; // Adjust rotation sensitivity
+    }
+  });
+
+  canvas.addEventListener("touchend", () => {
+    isRotating = false;
+  });
 
   session.requestAnimationFrame(onXRFrame);
 }
