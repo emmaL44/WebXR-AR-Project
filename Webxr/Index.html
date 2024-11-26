@@ -32,12 +32,18 @@ async function activateXR() {
 
   const scene = new THREE.Scene();
 
+  // Adjusted lighting from above
   const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  directionalLight.position.set(0, 5, 0).normalize();
+  directionalLight.position.set(0, 5, 0).normalize(); // Light from above (y=5)
   scene.add(directionalLight);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // Soft ambient light
   scene.add(ambientLight);
+
+  // Front light (point light)
+  const frontLight = new THREE.PointLight(0xffffff, 1, 10); // White light, intensity of 1, distance of 10 units
+  frontLight.position.set(0, 1, 2); // Position the light in front of the object
+  scene.add(frontLight);
 
   const loader = new THREE.GLTFLoader();
 
@@ -63,30 +69,7 @@ async function activateXR() {
     scene.add(reticle);
   });
 
-  let placedObject = null;
-
-  // Track touch events for rotation
-  let touchStartX = 0;
-  let touchStartY = 0;
-
-  canvas.addEventListener("touchstart", (event) => {
-    if (event.touches.length === 1) {
-      touchStartX = event.touches[0].clientX;
-      touchStartY = event.touches[0].clientY;
-    }
-  });
-
-  canvas.addEventListener("touchmove", (event) => {
-    if (event.touches.length === 1 && placedObject) {
-      const touchMoveX = event.touches[0].clientX;
-      const deltaX = touchMoveX - touchStartX;
-
-      // Rotate the object around the Y-axis
-      placedObject.rotation.y += deltaX * 0.01; // Adjust the multiplier for sensitivity
-
-      touchStartX = touchMoveX;
-    }
-  });
+  let placedObject = null; // To track the placed object
 
   const onXRFrame = (time, frame) => {
     session.requestAnimationFrame(onXRFrame);
@@ -116,18 +99,18 @@ async function activateXR() {
         );
         reticle.updateMatrixWorld(true);
 
-        // Place the chair at the reticle position when the user selects the reticle
+        // Place the chair at the reticle position when the user selects the reticle (e.g., tapping on the screen)
         session.addEventListener("select", () => {
           if (!placedObject && chair) {
-            chair.position.copy(reticle.position);
-            chair.rotation.set(0, 0, 0);
-            chair.scale.set(1, 1, 1);
+            chair.position.copy(reticle.position); // Place at reticle position
+            chair.rotation.set(0, 0, 0); // Reset rotation if needed
+            chair.scale.set(1, 1, 1); // Set default scale
             scene.add(chair);
-            placedObject = chair;
+            placedObject = chair; // Mark the object as placed
           }
         });
       } else {
-        reticle.visible = false;
+        reticle.visible = false; // Hide the reticle if no hit-test result
       }
 
       renderer.render(scene, camera);
